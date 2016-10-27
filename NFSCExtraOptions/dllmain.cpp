@@ -7,22 +7,29 @@
 
 DWORD WINAPI Thing(LPVOID);
 
-DWORD Strings, HeatLevelAddr;
-unsigned char minLaps, maxLaps, minTime, maxTime, minOpponents, maxOpponents, csBlacklist, headLightsMode, MaximumMultiplierTrack, MaximumMultiplierCanyon;
-int hotkeyToggleForceHeat, hotkeyForceHeatLevel, hotkeyToggleCopLights, hotkeyToggleHeadLights, hotkeyUnlockSeriesCarsAndUpgrades;
-bool UnfreezeRaceWarsCircuits, ShowMoreRaceOptions, ShowSubs, EnableMoreCarCategories, ShowLanguageSelectScreen, InfiniteAutosculptSliders, nlgzrgnTakeOver, EnableCameras, copLightsEnabled, RemoveNeonBarriers, UnlockStrangeRace, UnlockSeriesCarsAndUpgrades, EnableHeatLevelOverride, AlwaysRain, WindowedMode, SkipMovies, EnableSound, EnableMusic, EnableVoice;
+DWORD HeatLevelAddr, AutoDriveAddr;
+unsigned char minLaps, maxLaps, minTime, maxTime, minOpponents, maxOpponents, csBlacklist, headLightsMode, MaximumMultiplierTrack, MaximumMultiplierCanyon, TrafficLow, TrafficMed, TrafficHigh, CameraDriftMoveMode, ShowSpecialVinyls, ShowMoreRaceOptions;
+int hotkeyToggleForceHeat, hotkeyForceHeatLevel, hotkeyToggleCopLights, hotkeyToggleHeadLights, hotkeyUnlockSeriesCarsAndUpgrades, hotkeyAutoDrive;
+bool UnfreezeRaceWarsCircuits, ShowSubs, EnableMoreCarCategories, ShowLanguageSelectScreen, InfiniteAutosculptSliders, nlgzrgnTakeOver, EnableCameras, copLightsEnabled, RemoveNeonBarriers, UnlockStrangeRace, UnlockSeriesCarsAndUpgrades, EnableHeatLevelOverride, AlwaysRain, WindowedMode, SkipMovies, EnableSound, EnableMusic, EnableVoice, GarageZoom, GarageRotate, GarageShowcase, ShowDebugCarCustomize, Win10Fix, AugmentedDriftWithEBrake, AutoDrive, UnlockAllThings;
 bool forceHeatLevel = 0, once1 = 0, once2 = 0;
-float SplashScreenTimeLimit, copLightsAmount, LowBeamAmount, HighBeamAmount, MinHeatLevel, MaxHeatLevel, heatLevel, RainAmount, RoadReflection, FallingRainSize, RainIntensity, RainXing, RainFallSpeed, RainGravity;
+float SplashScreenTimeLimit, copLightsAmount, LowBeamAmount, HighBeamAmount, MinHeatLevel, MaxHeatLevel, heatLevel, RainAmount, RoadReflection, FallingRainSize, RainIntensity, RainXing, RainFallSpeed, RainGravity, WorldAnimationSpeed, GameSpeed, CarScale;
 
 DWORD HeatLevelsCodeCaveExit = 0x449a82;
-/*
+DWORD StringReplacementCodeCaveExit = 0x57861F;
+
+char* StringBuffer1 = "© 2006 Electronic Arts Inc. All rights reserved.^NFSC Extra Options - © 2016 nlgzrgn. No rights reserved.";
+DWORD _A7EBC389_New = (DWORD)StringBuffer1;
+
 DWORD CopsOptionCodeCaveExit = 0x84C1E1;
 DWORD CopsOptionCodeCave2Exit = 0x84C20A;
 DWORD CopsOptionCodeCave3Exit = 0x84C219;
+DWORD LearnRaceModeCodeCaveExit = 0x85E639;
 
 DWORD AddElementToTrackOptions = 0x84bdd0;
+DWORD RaceOptionToCreate;
+DWORD QRRaceMode;
 
-DWORD CopsEAX;*/
+bool QRLaps, QRCrew, QRTraffic, QROpponents, QRCatchUp, QRNitrous, QRShadowOption, QRDifficulty, QRCops;
 
 void __declspec(naked) HeatLevelsCodeCave()
 {
@@ -43,12 +50,12 @@ void __declspec(naked) HeatLevelsCodeCave()
 
 	}
 }
-/*
+
 void __declspec(naked) CopsOptionCodeCave()
 {
 	_asm
 	{
-			mov CopsEAX,eax
+			mov RaceOptionToCreate,eax
 			push 0x00000084
 			jmp CopsOptionCodeCaveExit
 	}
@@ -58,7 +65,7 @@ void __declspec(naked) CopsOptionCodeCave2()
 {
 	_asm
 	{
-			cmp CopsEAX,10
+			cmp RaceOptionToCreate,0x0A
 			je PushCopsAddress
 
 		PushNOSAddress:
@@ -75,7 +82,7 @@ void __declspec(naked) CopsOptionCodeCave3()
 {
 	_asm
 	{
-			cmp CopsEAX, 10
+			cmp RaceOptionToCreate, 0x0A
 			je PushCopsName
 
 		PushNOSName:
@@ -88,39 +95,16 @@ void __declspec(naked) CopsOptionCodeCave3()
 	}
 }
 
-void __declspec(naked) CopsCodeCaveSprint()
+void __declspec(naked) LearnRaceModeCodeCave()
 {
 	_asm
 	{
-			lea ecx, [esp + 0x0B]
-			push ecx
-			push 0x0A // select newly added cops option
-			mov ecx, esi
-			mov[esp + 0x13], bl
-			call CopsCodeCaveCall
-			lea eax, [esp + 0x0B]
-			push eax
-			jmp CopsCodeCaveSprintExit
+			mov QRRaceMode, eax
+			jmp LearnRaceModeCodeCaveExit
 	}
 }
 
-void __declspec(naked) CopsCodeCaveSprintCanyon()
-{
-	_asm
-	{
-			lea edx, [esp + 0x0B]
-			push edx
-			push 0x0A // select newly added cops option
-			mov ecx, esi
-			mov[esp + 0x13], bl
-			call CopsCodeCaveCall
-			lea ecx, [esp + 0x0B]
-			push ecx
-			jmp CopsCodeCaveSprintCanyonExit
-	}
-}
-
-void __declspec(naked) CopsCodeCaveCircuit()
+void __declspec(naked) NewRaceMenuCodeCave()
 {
 	_asm
 	{
@@ -128,20 +112,182 @@ void __declspec(naked) CopsCodeCaveCircuit()
 			push ebx
 			push esi
 
+			// Choose which options to show
+			mov eax, QRRaceMode
+			inc eax // It decreases before the code cave
+
+			cmp ShowMoreRaceOptions,2
+			je GMCircuit
+
+			cmp eax, 2
+			je GMSprint
+			cmp eax, 8
+			je GMSprint
+			cmp eax, 3
+			je GMSprintCanyon
+			cmp eax, 5
+			je GMDrift
+			cmp eax, 6
+			je GMCanyonDrift
+			cmp eax, 9
+			je GMCanyon
+			cmp eax, 10
+			je GMPursuitTag
+			cmp eax, 11
+			je GMPursuitKO
+			cmp eax, 14
+			je GMRaceWars
+			cmp eax, 7
+			je GMCheckpoint
+			jmp GMCircuit
+
+			// Game Modes
+		GMSprint:
+			mov QRLaps, 0
+			mov QRCrew, 1
+			mov QRTraffic, 1
+			mov QROpponents, 1
+			mov QRCatchUp, 1
+			mov QRNitrous, 1
+			mov QRShadowOption, 1
+			mov QRDifficulty, 1
+			mov QRCops, 1
+			jmp AddMenuElements
+
+		GMSprintCanyon :
+			mov QRLaps, 0
+			mov QRCrew, 0
+			mov QRTraffic, 1
+			mov QROpponents, 1
+			mov QRCatchUp, 1
+			mov QRNitrous, 1
+			mov QRShadowOption, 1
+			mov QRDifficulty, 1
+			mov QRCops, 1
+			jmp AddMenuElements
+
+		GMCircuit :
+			mov QRLaps, 1
+			mov QRCrew, 1
+			mov QRTraffic, 1
+			mov QROpponents, 1
+			mov QRCatchUp, 0 // To fix a crash, sorry for that. :(
+			mov QRNitrous, 1
+			mov QRShadowOption, 1
+			mov QRDifficulty, 1
+			mov QRCops, 1
+			jmp AddMenuElements
+
+		GMDrift :
+			mov QRLaps, 1
+			mov QRCrew, 0
+			mov QRTraffic, 1
+			mov QROpponents, 0
+			mov QRCatchUp, 0
+			mov QRNitrous, 1
+			mov QRShadowOption, 1
+			mov QRDifficulty, 0
+			mov QRCops, 1
+			jmp AddMenuElements
+
+		GMCanyonDrift :
+			mov QRLaps, 0
+			mov QRCrew, 0
+			mov QRTraffic, 1
+			mov QROpponents, 0
+			mov QRCatchUp, 0
+			mov QRNitrous, 1
+			mov QRShadowOption, 0
+			mov QRDifficulty, 0
+			mov QRCops, 1
+			jmp AddMenuElements
+
+		GMCanyon :
+			mov QRLaps, 0
+			mov QRCrew, 0
+			mov QRTraffic, 1
+			mov QROpponents, 0
+			mov QRCatchUp, 0
+			mov QRNitrous, 1
+			mov QRShadowOption, 0
+			mov QRDifficulty, 1
+			mov QRCops, 1
+			jmp AddMenuElements
+
+		GMPursuitTag :
+			mov QRLaps, 1
+			mov QRCrew, 0
+			mov QRTraffic, 0
+			mov QROpponents, 1
+			mov QRCatchUp, 0
+			mov QRNitrous, 0
+			mov QRShadowOption, 0
+			mov QRDifficulty, 0
+			mov QRCops, 0
+			jmp AddMenuElements
+
+		GMPursuitKO :
+			mov QRLaps, 0
+			mov QRCrew, 0
+			mov QRTraffic, 1
+			mov QROpponents, 1
+			mov QRCatchUp, 0
+			mov QRNitrous, 0
+			mov QRShadowOption, 0
+			mov QRDifficulty, 0
+			mov QRCops, 0
+			jmp AddMenuElements
+
+		GMRaceWars :
+			mov QRLaps, 1
+			mov QRCrew, 0
+			mov QRTraffic, 0
+			mov QROpponents, 1
+			mov QRCatchUp, 1
+			mov QRNitrous, 1
+			mov QRShadowOption, 1
+			mov QRDifficulty, 1
+			mov QRCops, 1
+			jmp AddMenuElements
+
+		GMCheckpoint :
+			mov QRLaps, 0
+			mov QRCrew, 0
+			mov QRTraffic, 1
+			mov QROpponents, 0
+			mov QRCatchUp, 0
+			mov QRNitrous, 1
+			mov QRShadowOption, 1
+			mov QRDifficulty, 0
+			mov QRCops, 1
+			jmp AddMenuElements
+
+			// Do the job
+		AddMenuElements:
+
+		MGameMode:
+
 			lea eax, [esp + 0x0B]
 			push eax
-			mov ebx,1
+			mov ebx,0x00000001
 			push 0 // Game Mode
 			mov esi,ecx
 			mov byte ptr ds : [esp + 0x13], bl
 			call AddElementToTrackOptions
 
+		MTrackingMode:
+
 			lea ecx, [esp + 0x0B]
 			push ecx
-			push ebx // Tracking Mode
+			push 1 // Tracking Mode
 			mov ecx,esi
 			mov byte ptr ds : [esp + 0x13], bl
 			call AddElementToTrackOptions
+
+		MShadowOption:
+
+			cmp QRShadowOption, 1
+			jne MDifficulty
 
 			lea edx, [esp + 0x0B]
 			push edx
@@ -150,12 +296,21 @@ void __declspec(naked) CopsCodeCaveCircuit()
 			mov byte ptr ds : [esp + 0x13], bl
 			call AddElementToTrackOptions
 
+		MDifficulty:
+
+			cmp QRDifficulty, 1
+			jne MLaps
+
 			lea eax, [esp + 0x0B]
 			push eax
 			push 9 // Difficulty
 			mov ecx, esi
 			mov byte ptr ds : [esp + 0x13], bl
 			call AddElementToTrackOptions
+
+		MLaps :
+			cmp QRLaps, 1
+			jne MCrewMember
 
 			lea ecx, [esp + 0x0B]
 			push ecx
@@ -164,12 +319,20 @@ void __declspec(naked) CopsCodeCaveCircuit()
 			mov byte ptr ds : [esp + 0x13], bl
 			call AddElementToTrackOptions
 
+		MCrewMember:
+			cmp QRCrew, 1
+			jne MTraffic
+
 			lea edx, [esp + 0x0B]
 			push edx
 			push 3 // Crew Member
 			mov ecx, esi
 			mov byte ptr ds : [esp + 0x13], bl
 			call AddElementToTrackOptions
+
+		MTraffic:
+			cmp QRTraffic, 1
+			jne MCops
 
 			lea eax, [esp + 0x0B]
 			push eax
@@ -178,12 +341,20 @@ void __declspec(naked) CopsCodeCaveCircuit()
 			mov byte ptr ds : [esp + 0x13], bl
 			call AddElementToTrackOptions
 
+		MCops:
+			cmp QRCops, 1
+			jne MOpponents
+
 			lea ecx, [esp + 0x0B]
 			push ecx
 			push 10 // Cops
 			mov ecx, esi
 			mov byte ptr ds : [esp + 0x13], bl
 			call AddElementToTrackOptions
+
+		MOpponents:
+			cmp QROpponents, 1
+			jne MCatchUp
 
 			lea edx, [esp + 0x0B]
 			push edx
@@ -192,12 +363,20 @@ void __declspec(naked) CopsCodeCaveCircuit()
 			mov byte ptr ds : [esp + 0x13], bl
 			call AddElementToTrackOptions
 
+		MCatchUp:
+			cmp QRCatchUp, 1
+			jne MNos
+
 			lea eax, [esp + 0x0B]
 			push eax
 			push 6 // Catch Up
 			mov ecx, esi
 			mov byte ptr ds : [esp + 0x13], bl
 			call AddElementToTrackOptions
+
+		MNos:
+			cmp QRNitrous, 1
+			jne MExit
 
 			lea ecx, [esp + 0x0B]
 			push ecx
@@ -206,6 +385,8 @@ void __declspec(naked) CopsCodeCaveCircuit()
 			mov byte ptr ds : [esp + 0x13], bl
 			call AddElementToTrackOptions
 
+		MExit:
+
 			pop esi
 			pop ebx
 			pop ecx
@@ -213,118 +394,37 @@ void __declspec(naked) CopsCodeCaveCircuit()
 	}
 }
 
-void __declspec(naked) CopsCodeCaveDriftTrack()
+void __declspec(naked) StringReplacementCodeCave()
 {
 	_asm
 	{
-			lea ecx, [esp + 0x0B]
-			push ecx
-			push 0x0A // select newly added cops option
-			mov ecx, esi
-			mov[esp + 0x13], bl
-			call CopsCodeCaveCall
-			lea eax, [esp + 0x0B]
-			push eax
-			jmp CopsCodeCaveDriftTrackExit
+			mov ecx, dword ptr ds : [ebx + eax * 0x08]
+
+			cmp nlgzrgnTakeOver, 0x00
+			je continuee
+			cmp ecx, 0xA7EBC389
+			je ReplaceCopyrightString
+			// cmp ecx, AnotherStringHashHere
+			// je ReplaceAnotherString
+			jmp continuee
+
+		ReplaceCopyrightString :
+			cmp once1, 0x01
+			je continuee
+
+			mov ecx, _A7EBC389_New
+			mov dword ptr[ebx + eax * 0x08 + 0x04], ecx
+
+			mov once1, 0x01
+			mov ecx, 0xA7EBC389
+
+		continuee :
+			cmp ecx, edx
+			jmp StringReplacementCodeCaveExit
+
 	}
 }
 
-void __declspec(naked) CopsCodeCaveDriftCanyon()
-{
-	_asm
-	{
-			lea eax, [esp + 0x0B]
-			push eax
-			push 0x0A // select newly added cops option
-			mov ecx, esi
-			mov[esp + 0x13], bl
-			call CopsCodeCaveCall
-			lea edx, [esp + 0x0B]
-			push edx
-			jmp CopsCodeCaveDriftCanyonExit
-	}
-}
-
-void __declspec(naked) CopsCodeCaveDuelCanyon()
-{
-	_asm
-	{
-			lea eax, [esp + 0x0B]
-			push eax
-			push 0x0A // select newly added cops option
-			mov ecx, esi
-			mov[esp + 0x13], bl
-			call CopsCodeCaveCall
-			lea edx, [esp + 0x0B]
-			push edx
-			jmp CopsCodeCaveDuelCanyonExit
-	}
-}
-
-void __declspec(naked) CopsCodeCavePTag()
-{
-	_asm
-	{
-			lea eax, [esp + 0x0B]
-			push eax
-			push 0x0A // select newly added cops option
-			mov ecx, esi
-			mov[esp + 0x13], bl
-			call CopsCodeCaveCall
-			lea edx, [esp + 0x0B]
-			push edx
-			jmp CopsCodeCavePTagExit
-	}
-}
-
-void __declspec(naked) CopsCodeCavePKO()
-{
-	_asm
-	{
-			lea eax, [esp + 0x0B]
-			push eax
-			push 0x0A // select newly added cops option
-			mov ecx, esi
-			mov[esp + 0x13], bl
-			call CopsCodeCaveCall
-			lea edx, [esp + 0x0B]
-			push edx
-			jmp CopsCodeCavePKOExit
-	}
-}
-
-void __declspec(naked) CopsCodeCaveCircuitRW()
-{
-	_asm
-	{
-			lea eax, [esp + 0x0B]
-			push eax
-			push 0x0A // select newly added cops option
-			mov ecx, esi
-			mov[esp + 0x13], bl
-			call CopsCodeCaveCall
-			lea edx, [esp + 0x0B]
-			push edx
-			jmp CopsCodeCaveCircuitRWExit
-	}
-}
-
-void __declspec(naked) CopsCodeCaveCheckpoint()
-{
-	_asm
-	{
-			lea ecx, [esp + 0x0B]
-			push ecx
-			push 0x0A // select newly added cops option
-			mov ecx, esi
-			mov[esp + 0x13], bl
-			call CopsCodeCaveCall
-			lea eax, [esp + 0x0B]
-			push eax
-			jmp CopsCodeCaveCheckpointExit
-	}
-}
-*/
 
 void Init()
 {
@@ -336,6 +436,8 @@ void Init()
 	hotkeyToggleCopLights = iniReader.ReadInteger("Hotkeys", "CopLights", 79); // O
 	hotkeyToggleHeadLights = iniReader.ReadInteger("Hotkeys", "HeadLights", 72); // H
 	hotkeyUnlockSeriesCarsAndUpgrades = iniReader.ReadInteger("Hotkeys", "UnlockSeriesCarsAndUpgrades", 119); // F8
+	hotkeyAutoDrive = iniReader.ReadInteger("Hotkeys", "AutoDrive", 117); // F6
+
 
 	// LapControllers
 	minLaps = iniReader.ReadInteger("LapControllers", "Minimum", 0);
@@ -345,21 +447,35 @@ void Init()
 	
 	// OpponentControllers
 	minOpponents = iniReader.ReadInteger("OpponentControllers", "Minimum", 0);
-	maxOpponents = iniReader.ReadInteger("OpponentControllers", "Maximum", 6);
-	UnfreezeRaceWarsCircuits = iniReader.ReadInteger("LapControllers", "UnfreezeRaceWarsCircuits", 1) == 1;
+	maxOpponents = iniReader.ReadInteger("OpponentControllers", "Maximum", 19);
+	UnfreezeRaceWarsCircuits = iniReader.ReadInteger("OpponentControllers", "UnfreezeRaceWarsCircuits", 1) == 1;
+
+	// TrafficControllers
+	TrafficLow = iniReader.ReadInteger("TrafficControllers", "Low", 3);
+	TrafficMed = iniReader.ReadInteger("TrafficControllers", "Medium", 10);
+	TrafficHigh = iniReader.ReadInteger("TrafficControllers", "High", 50);
 
 	// Menu
-	//ShowMoreRaceOptions = iniReader.ReadInteger("Menu", "ShowMoreRaceOptions", 1) == 1;
+	ShowMoreRaceOptions = iniReader.ReadInteger("Menu", "ShowMoreRaceOptions", 0);
 	ShowSubs = iniReader.ReadInteger("Menu", "ShowSubs", 0) == 1;
 	EnableMoreCarCategories = iniReader.ReadInteger("Menu", "ShowMoreCarCategories", 0) == 1;
 	ShowLanguageSelectScreen = iniReader.ReadInteger("Menu", "ShowLanguageSelectScreen", 0) == 1;
+	ShowSpecialVinyls = iniReader.ReadInteger("Menu", "ShowSpecialVinyls", 0);
+	ShowDebugCarCustomize = iniReader.ReadInteger("Menu", "ShowDebugCarCustomize", 0) == 1;
 	InfiniteAutosculptSliders = iniReader.ReadInteger("Menu", "InfiniteAutosculptSliders", 0) == 1;
 	csBlacklist = iniReader.ReadInteger("Menu", "ChallengeSeriesBlacklist", 19);
 	SplashScreenTimeLimit = iniReader.ReadFloat("Menu", "SplashScreenTimeLimit", 30.0f);
+	GarageZoom = iniReader.ReadInteger("Menu", "ShowcaseCamInfiniteZoom", 0) == 1;
+	GarageRotate = iniReader.ReadInteger("Menu", "ShowcaseCamInfiniteRotation", 0) == 1;
+	GarageShowcase = iniReader.ReadInteger("Menu", "ShowcaseCamAlwaysEnable", 0) == 1;
 	nlgzrgnTakeOver = iniReader.ReadInteger("Menu", "DisableTakeover", 0) == 0;
 
 	// Gameplay
 	EnableCameras = iniReader.ReadInteger("Gameplay", "EnableHiddenCameraModes", 0) == 1;
+	CameraDriftMoveMode = iniReader.ReadInteger("Gameplay", "SmartLookaheadCameraMode", 0);
+	GameSpeed = iniReader.ReadFloat("Gameplay", "GameSpeed", 1.0f);
+	WorldAnimationSpeed = iniReader.ReadFloat("Gameplay", "WorldAnimationSpeed", 45.0f);
+	CarScale = iniReader.ReadFloat("Gameplay", "CarScale", 1.0f);
 	copLightsEnabled = iniReader.ReadInteger("Gameplay", "CopLightsMode", 0) == 1;
 	copLightsAmount = iniReader.ReadFloat("Gameplay", "CopLightsBrightness", 1.00f);
 	headLightsMode = iniReader.ReadInteger("Gameplay", "HeadLightsMode", 2);
@@ -368,10 +484,12 @@ void Init()
 	RemoveNeonBarriers = iniReader.ReadInteger("Gameplay", "RemoveNeonBarriers", 0) == 1;
 	UnlockStrangeRace = iniReader.ReadInteger("Gameplay", "UnlockStrangeRace", 0) == 1;
 	UnlockSeriesCarsAndUpgrades = iniReader.ReadInteger("Gameplay", "UnlockSeriesCarsAndUpgrades", 0) == 1;
+	UnlockAllThings = iniReader.ReadInteger("Gameplay", "UnlockAllThings", 0) == 1;
 
 	// Drift
 	MaximumMultiplierTrack = iniReader.ReadInteger("Drift", "MaximumMultiplierTrack", 10);
 	MaximumMultiplierCanyon = iniReader.ReadInteger("Drift", "MaximumMultiplierCanyon", 20);
+	AugmentedDriftWithEBrake = iniReader.ReadInteger("Drift", "AugmentedDriftWithEBrake", 0) == 1;
 
 	// Pursuit
 	EnableHeatLevelOverride = iniReader.ReadInteger("Pursuit", "HeatLevelOverride", 0) == 1;
@@ -390,6 +508,7 @@ void Init()
 
 	// Misc
 	WindowedMode = iniReader.ReadInteger("Misc", "WindowedMode", 0) == 1;
+	Win10Fix = iniReader.ReadInteger("Misc", "Win10Fix", 1) == 1;
 	SkipMovies = iniReader.ReadInteger("Misc", "SkipMovies", 0) == 1;
 	EnableSound = iniReader.ReadInteger("Misc", "EnableSound", 1) == 1;
 	EnableMusic = iniReader.ReadInteger("Misc", "EnableMusic", 1) == 1;
@@ -401,8 +520,8 @@ void Init()
 	if (minTime < 0 || minTime > 127) minTime = 3;
 	if (maxTime < 0 || maxTime > 127) maxTime = 7;
 
-	if (minOpponents < 0 || minOpponents > 28) minOpponents = 0;
-	if (maxOpponents < 0 || maxOpponents > 28) maxOpponents = 7;
+	if (minOpponents < 0 || minOpponents > 29) minOpponents = 0;
+	if (maxOpponents < 0 || maxOpponents > 29) maxOpponents = 7;
 
 	if (MaximumMultiplierTrack < 1 || MaximumMultiplierTrack > 127) MaximumMultiplierTrack = 10;
 	if (MaximumMultiplierCanyon < 1 || MaximumMultiplierCanyon > 127) MaximumMultiplierCanyon = 20;
@@ -410,6 +529,12 @@ void Init()
 	if (MaxHeatLevel < 1 || MaxHeatLevel < MinHeatLevel || MaxHeatLevel > 10) MaxHeatLevel = 5;
 	if (MinHeatLevel < 1 || MaxHeatLevel < MinHeatLevel || MinHeatLevel > 10) MinHeatLevel = 1;
 	if (headLightsMode > 2) headLightsMode = 2;
+
+	if (TrafficLow < 0 || TrafficLow > 100) TrafficLow = 3;
+	if (TrafficMed < 0 || TrafficMed > 100) TrafficMed = 10;
+	if (TrafficHigh < 0 || TrafficHigh > 100) TrafficHigh = 50;
+
+	if (ShowSpecialVinyls > 2) ShowSpecialVinyls = 2;
 	
 	// Lap Controllers
 	injector::WriteMemory<unsigned char>(0x4ac7fd, maxLaps, true);
@@ -439,7 +564,13 @@ void Init()
 		injector::WriteMemory<unsigned char>(0x84b9a4, 0xEB, true);
 	}
 
-	/* Tweaked Race Options Menus - Disabled because of a crash
+	// Traffic Density Controllers (0-100)
+	injector::WriteMemory<unsigned char>(0x7A9E40, TrafficLow, true); // Low (3)
+	injector::WriteMemory<unsigned char>(0x7A9E44, TrafficMed, true); // Medium (10)
+	injector::WriteMemory<unsigned char>(0x7A9E48, TrafficHigh, true); // High (50)
+
+
+	// Tweaked Race Options Menus
 	if (ShowMoreRaceOptions)
 	{
 		// Add 10th option to Quick Race Settings
@@ -452,18 +583,15 @@ void Init()
 		injector::MakeNOP(0x84c211, CopsOptionCodeCave3Exit - 0x84c211, true);
 		injector::MakeJMP(0x84c211, CopsOptionCodeCave3, true);
 
-		// Add Cops to every menu
-		injector::MakeJMP(0x8586EC, CopsCodeCaveSprint, true);
-		injector::MakeJMP(0x85877F, CopsCodeCaveSprintCanyon, true);
-		injector::MakeJMP(0x858670, CopsCodeCaveCircuit, true);
-		injector::MakeJMP(0x858911, CopsCodeCaveDriftTrack, true);
-		injector::MakeJMP(0x858958, CopsCodeCaveDriftCanyon, true);
-		injector::MakeJMP(0x858998, CopsCodeCaveDuelCanyon, true);
-		injector::MakeJMP(0x8589DA, CopsCodeCavePTag, true);
-		injector::MakeJMP(0x858A48, CopsCodeCavePKO, true);
-		injector::MakeJMP(0x858AC2, CopsCodeCaveCircuitRW, true);
-		injector::MakeJMP(0x858B49, CopsCodeCaveCheckpoint, true);
-	}*/
+		// Use a Reworked Circuit Menu for All
+		injector::MakeRangedNOP(0x85E62D, 0x85E639, true);
+		injector::MakeJMP(0x85E62D, LearnRaceModeCodeCave, true);
+		injector::MakeCALL(0x85E63B, NewRaceMenuCodeCave, true);
+
+		// Force-Enable Game Mode Selection??
+		if (ShowMoreRaceOptions==2) injector::MakeRangedNOP(0x84b771, 0x84b799, true);
+
+	}
 
 	// Show Subtitles
 	if (ShowSubs)
@@ -488,6 +616,10 @@ void Init()
 	{
 		injector::WriteMemory<DWORD>(0x5BD584, 0x5BD4D0, true);
 		injector::WriteMemory<DWORD>(0x5BD59C, 0x5BD424, true);
+
+		// Show all languages
+		injector::MakeNOP(0x85E14B, 2, true);
+		injector::WriteMemory<unsigned char>(0x85E1CF, 0x0B, true);
 	}
 
 	// Infinite Autosculpt
@@ -591,11 +723,143 @@ void Init()
 	injector::WriteMemory<float>(0xA797E8, RainGravity, true);
 
 	// Misc Options (Like MW Mod Loader)
-	injector::WriteMemory<unsigned char>(0xAB0AD4, WindowedMode, true);
-	injector::WriteMemory<unsigned char>(0xA9E6D8, SkipMovies, true);
-	injector::WriteMemory<unsigned char>(0xA631B8, EnableSound, true);
-	injector::WriteMemory<unsigned char>(0xA631BC, EnableMusic, true);
-	injector::WriteMemory<unsigned char>(0xA631C0, EnableVoice, true);
+	if (WindowedMode)
+	{
+		injector::WriteMemory<unsigned char>(0xAB0AD4, WindowedMode, true);
+	}
+	
+	if (SkipMovies)
+	{
+		injector::WriteMemory<unsigned char>(0xA9E6D8, SkipMovies, true);
+	}
+	
+	if (!EnableSound)
+	{
+		injector::WriteMemory<unsigned char>(0xA631B8, EnableSound, true);
+	}
+	
+	if (!EnableMusic)
+	{
+		injector::WriteMemory<unsigned char>(0xA631BC, EnableMusic, true);
+	}
+	
+	if (!EnableVoice)
+	{
+		injector::WriteMemory<unsigned char>(0xA631C0, EnableVoice, true);
+	}
+
+	// Save Game loading fixes (Crash, 0% Progress, No cars, etc.)
+	if (Win10Fix)
+	{
+		injector::MakeNOP(0x59606D, 2, true);
+		injector::MakeNOP(0x5960A9, 2, true);
+	}
+
+	// Add Special vinyls to shop
+	if (ShowSpecialVinyls)
+	{
+		if (ShowSpecialVinyls == 1) injector::WriteMemory<unsigned char>(0x588BA7, 0x16, true); // Show Special category
+		
+		injector::MakeNOP(0x588BBA, 2, true); // Show Virus Category (Will be hidden if Special is shown)
+
+		// Remove Vinyl - Car Specifications
+		injector::MakeNOP(0x588B8B, 2, true);
+		injector::MakeNOP(0x588B96, 2, true);
+		injector::MakeNOP(0x588BA3, 2, true);
+	}
+
+	// Add Debug Car Customize to main menu
+	if (ShowDebugCarCustomize)
+	{
+		injector::WriteMemory<unsigned char>(0xA9E680, 1, true);
+	}
+
+	// Drift Camera Movement (SmartLookAheadCamera)
+	switch (CameraDriftMoveMode)
+	{
+	case 0: // Disable for all
+			injector::WriteMemory<unsigned char>(0x48539C, 0xB3, true); // Drift
+			injector::WriteMemory<unsigned char>(0x48539D, 0x00, true);
+			injector::WriteMemory<unsigned char>(0x485398, 0xB3, true); // Others
+			injector::WriteMemory<unsigned char>(0x485399, 0x00, true);
+		break;
+
+	case 1: default: // Enable for Drift, disable for others (Default behaviour)
+			injector::WriteMemory<unsigned char>(0x48539C, 0xB3, true); // Drift
+			injector::WriteMemory<unsigned char>(0x48539D, 0x01, true);
+			injector::WriteMemory<unsigned char>(0x485398, 0xB3, true); // Others
+			injector::WriteMemory<unsigned char>(0x485399, 0x00, true);
+		break;
+
+	case 2: // Disable for Drift, enable for others
+			injector::WriteMemory<unsigned char>(0x48539C, 0xB3, true); // Drift
+			injector::WriteMemory<unsigned char>(0x48539D, 0x00, true);
+			injector::WriteMemory<unsigned char>(0x485398, 0xB3, true); // Others
+			injector::WriteMemory<unsigned char>(0x485399, 0x01, true);
+		break;
+
+	case 3: // Enable for all
+			injector::WriteMemory<unsigned char>(0x48539C, 0xB3, true); // Drift
+			injector::WriteMemory<unsigned char>(0x48539D, 0x01, true);
+			injector::WriteMemory<unsigned char>(0x485398, 0xB3, true); // Others
+			injector::WriteMemory<unsigned char>(0x485399, 0x01, true);
+		break;
+	}
+
+	// NIS Like Drift With Handbrake
+	if (AugmentedDriftWithEBrake)
+	{
+		injector::WriteMemory<unsigned char>(0xA9E65B, 0x01, true);
+	}
+
+	// Fix Invisible Wheels
+	injector::WriteMemory<unsigned char>(0x7BDDBC, 0x01, true);
+
+	// Garage Hacks
+	if (GarageZoom)
+	{
+		// Code cleanup
+		injector::MakeRangedNOP(0x493A04, 0x493A0B, true);
+		injector::MakeRangedNOP(0x493a27, 0x493A4B, true);
+
+		// Fix mouse wheel and photo mode zoom
+		injector::WriteMemory<unsigned char>(0x493A1D, 0xC7, true); // mov dword ptr ds:
+		injector::WriteMemory<unsigned char>(0x493A1E, 0x86, true);
+		injector::WriteMemory<DWORD>(0x493A1F, 0x160, true); // [esi+0x160],
+		injector::WriteMemory<DWORD>(0x493A23, 0x00000000, true); // 0
+	}
+	if (GarageRotate)
+	{
+		injector::MakeNOP(0x4939C3, 5, true);
+		injector::WriteMemory<unsigned char>(0x4939C3, 0xB0, true);
+		injector::WriteMemory<unsigned char>(0x4939C4, 0x01, true);
+	}
+	if (GarageShowcase)
+	{
+		injector::MakeNOP(0x83EFBB, 5, true);
+		injector::WriteMemory<unsigned char>(0x83EFBB, 0xB0, true);
+		injector::WriteMemory<unsigned char>(0x83EFBC, 0x01, true);
+	}
+
+	// Unlock All Things
+	if (UnlockAllThings)
+	{
+		injector::WriteMemory<unsigned char>(0xA9E6C0, 0x01, true);
+	}
+
+	// World Animation Speed
+	injector::WriteMemory<float>(0xA798B4, WorldAnimationSpeed, true);
+
+	// Game Speed
+	injector::WriteMemory<float>(0xA712AC, GameSpeed, true);
+
+	// Car size hack
+	injector::WriteMemory<float>(0x7AD540, CarScale, true); // Length
+	injector::WriteMemory<float>(0x7AD572, CarScale, true); // Width
+	injector::WriteMemory<float>(0x7AD5A4, CarScale, true); // Height
+
+	// String Replacement
+	injector::MakeJMP(0x57861A, StringReplacementCodeCave, true);
 
     // Other Things
 	CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Thing, NULL, 0, NULL);
@@ -606,8 +870,8 @@ DWORD WINAPI Thing(LPVOID)
 	while (true)
 	{
 		Sleep(0);
-		Strings = *(DWORD*)0xA95378; // String Table Pointer
 		HeatLevelAddr = (*(DWORD*)0xAA7724) + 0x14; // Heat Level Pointer
+		AutoDriveAddr = (*(DWORD*)0xA9FFF8) + 0x8; // AutoDrive (AIControl)
 		
 		//Advanced Force Heat Level
 		if ((GetAsyncKeyState(hotkeyToggleForceHeat) & 1)) //When pressed "Toggle Force Heat"
@@ -711,16 +975,45 @@ DWORD WINAPI Thing(LPVOID)
 			while ((GetAsyncKeyState(hotkeyUnlockSeriesCarsAndUpgrades) & 0x8000) > 0) { Sleep(0); }
 		}
 
-
-		if (Strings && nlgzrgnTakeOver && !once2) // Indicate if ExOpts is Loaded at splash screen (If nlgzrgnTakeOver enabled)
+		// .hot Save And Load
+		if ((GetAsyncKeyState(VK_LSHIFT) & 1)) // Save
 		{
-			DWORD CopyrightAddr = (Strings + 0x5014);
-			char* Copyright = *(char**)CopyrightAddr;
-			char* Append = "^NFSC Extra Options - © 2016 nlgzrgn. No Rights Reserved.";
-			char* Tookover = strcat(Copyright, Append);
-			injector::WriteMemory<DWORD>(CopyrightAddr, (DWORD)Tookover, true);
-			once2 = 1;
+			while ((GetAsyncKeyState(VK_LSHIFT) & 0x8000) > 0)
+			{
+				Sleep(0);
+				if (GetAsyncKeyState(49) & 1) { injector::WriteMemory<unsigned char>(0xb74bf8, 0x01, true); while ((GetAsyncKeyState(49) & 0x8000) > 0) Sleep(0); }
+				if (GetAsyncKeyState(50) & 1) { injector::WriteMemory<unsigned char>(0xb74bf8, 0x02, true); while ((GetAsyncKeyState(50) & 0x8000) > 0) Sleep(0); }
+				if (GetAsyncKeyState(51) & 1) { injector::WriteMemory<unsigned char>(0xb74bf8, 0x03, true); while ((GetAsyncKeyState(51) & 0x8000) > 0) Sleep(0); }
+				if (GetAsyncKeyState(52) & 1) { injector::WriteMemory<unsigned char>(0xb74bf8, 0x04, true); while ((GetAsyncKeyState(52) & 0x8000) > 0) Sleep(0); }
+				if (GetAsyncKeyState(53) & 1) { injector::WriteMemory<unsigned char>(0xb74bf8, 0x05, true); while ((GetAsyncKeyState(53) & 0x8000) > 0) Sleep(0); }
+			}
 		}
+
+		if ((GetAsyncKeyState(VK_LCONTROL) & 1)) // Load
+		{
+			while ((GetAsyncKeyState(VK_LCONTROL) & 0x8000) > 0)
+			{
+				Sleep(0);
+				if (GetAsyncKeyState(49) & 1) { injector::WriteMemory<unsigned char>(0xb74bfc, 0x01, true); while ((GetAsyncKeyState(49) & 0x8000) > 0) Sleep(0); }
+				if (GetAsyncKeyState(50) & 1) { injector::WriteMemory<unsigned char>(0xb74bfc, 0x02, true); while ((GetAsyncKeyState(50) & 0x8000) > 0) Sleep(0); }
+				if (GetAsyncKeyState(51) & 1) { injector::WriteMemory<unsigned char>(0xb74bfc, 0x03, true); while ((GetAsyncKeyState(51) & 0x8000) > 0) Sleep(0); }
+				if (GetAsyncKeyState(52) & 1) { injector::WriteMemory<unsigned char>(0xb74bfc, 0x04, true); while ((GetAsyncKeyState(52) & 0x8000) > 0) Sleep(0); }
+				if (GetAsyncKeyState(53) & 1) { injector::WriteMemory<unsigned char>(0xb74bfc, 0x05, true); while ((GetAsyncKeyState(53) & 0x8000) > 0) Sleep(0); }
+			}
+		}
+
+		// AutoDrive
+		if ((GetAsyncKeyState(hotkeyAutoDrive) & 1))
+		{
+			if (AutoDriveAddr)
+			{
+				AutoDrive = !AutoDrive;
+				injector::WriteMemory<bool>(AutoDriveAddr, AutoDrive, true);
+			}
+
+			while ((GetAsyncKeyState(hotkeyAutoDrive) & 0x8000) > 0) { Sleep(0); }
+		}
+
 	}
 	return 0;
 }
