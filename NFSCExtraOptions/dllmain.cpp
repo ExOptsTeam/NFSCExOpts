@@ -579,6 +579,9 @@ void Init()
 	injector::WriteMemory<unsigned char>(0x6ab943, MaximumMultiplierCanyon, true);
 	injector::WriteMemory<unsigned char>(0x6ab945, MaximumMultiplierCanyon, true);
 
+	// Drift Race Collision Threshold
+	injector::WriteMemory<float>(0xA62F10, DriftRaceCollisionThreshold, true);
+
 	// Heat Level Overrides EnableHeatLevelOverride
 	injector::MakeNOP(0x449a7c, HeatLevelsCodeCaveExit - 0x449a7c, true); // Clean the unused code
 	injector::MakeJMP(0x449a7c, HeatLevelsCodeCave, true); // Prepare the game for advanced force heat level hack
