@@ -287,6 +287,7 @@ void Init()
 	ShowDebugCarCustomize = iniReader.ReadInteger("Menu", "ShowDebugCarCustomize", 0) == 1;
 	ShowDebugEventID = iniReader.ReadInteger("Menu", "ShowDebugEventID", 0) == 1;
 	ShowHiddenTracks = iniReader.ReadInteger("Menu", "ShowHiddenTracks", 1) == 1;
+	InfiniteAutosculptSlider = iniReader.ReadInteger("Menu", "InfiniteAutosculptSlider", 0) == 1;
 	QRBackCamo = iniReader.ReadInteger("Menu", "QuickRaceBackgroundCamo", 3);
 	csBlacklist = iniReader.ReadInteger("Menu", "ChallengeSeriesBlacklist", 19);
 	SplashScreenTimeLimit = iniReader.ReadFloat("Menu", "SplashScreenTimeLimit", 30.0f);
@@ -604,6 +605,12 @@ void Init()
 	if (EnableFog)
 	{
 		injector::WriteMemory<unsigned char>(0xB74D64, 0x01, true);
+	}
+	
+	// Infinite Autosculpt Slider (i decided to bring back this function)
+	if (InfiniteAutosculptSlider)
+	{
+		injector::MakeNOP(0x57331E, 5, true);
 	}
 
 	// Quick Race Background Camo
