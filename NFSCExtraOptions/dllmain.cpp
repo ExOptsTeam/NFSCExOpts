@@ -14,7 +14,7 @@ unsigned char minLaps, maxLaps, minTime, maxTime, minOpponents, maxOpponents, cs
 int hotkeyToggleForceHeat, hotkeyForceHeatLevel, hotkeyToggleCops, hotkeyToggleCopLights, hotkeyToggleHeadlights, hotkeyUnlockAllThings, hotkeyAutoDrive, StartingCash, hotkeyDriftMode, ThreadDelay, GameState, SelectableMarkerCount, hotkeyFreezeCamera;
 bool ShowSubs, EnableMoreCarCategories, ShowLanguageSelectScreen, EnableDebugWorldCamera, ExOptsTeamTakeOver, EnableCameras, copLightsEnabled, RemoveNeonBarriers, UnlockStrangeRace, UnlockSeriesCarsAndUpgrades, EnableHeatLevelOverride, AlwaysRain, SkipMovies, EnableSound, EnableMusic, EnableVoice, GarageZoom, GarageRotate, GarageShowcase, ShowDebugCarCustomize, Win10Fix, AugmentedDriftWithEBrake, AutoDrive, UnlockAllThings, EnableSaveLoadHotPos, ShowHiddenTracks, ShowLightStreaks, PauseScreenBlur, HUDShakeEffect, ForceCollectorsEdition, WheelFix, X10Fix, EnableFog, SkipFirstTimeTutorials, ShowMessage, PursuitActionMode, DriftMode, SkipNISs, DebugWatchCarCamera, IsOnFocus, ShowPursuitCops, ShowNonPursuitCops, ShowAllCarsInFE, SkipCareerIntro, AllowMultipleInstances, UncensoredBustedScreen, TimeBugFix, ImmobileColFix, NFSU2StyleLookBackCamera, MoreCarsForOpponents, ShowDebugEventID, NoRevLimiter, NoCatchUp;
 bool forceHeatLevel = 0, once1 = 0, once2 = 0, DebugCamStatus, ToggleCops = 1;
-float SplashScreenTimeLimit, copLightsAmount, LowBeamAmount, HighBeamAmount, MinHeatLevel, MaxHeatLevel, heatLevel, RainAmount, RoadReflection, FallingRainSize, RainIntensity, RainXing, RainFallSpeed, RainGravity, WorldAnimationSpeed, GameSpeed, CarScale, SBRechargeTime, SBRechargeSpeedLimit, SBMassMultiplier, HUDUpdateRate, RadarRange, SpeedingLimit, ExcessiveSpeedingLimit, RecklessDrivingLimit, DriftRaceCollisionThreshold, DebugCameraTurboSpeed, DebugCameraSuperTurboSpeed, IdleCameraTimeout, RacePositionX, RacePositionY;
+float SplashScreenTimeLimit, copLightsAmount, LowBeamAmount, HighBeamAmount, MinHeatLevel, MaxHeatLevel, heatLevel, RainAmount, RoadReflection, FallingRainSize, RainIntensity, RainXing, RainFallSpeed, RainGravity, WorldAnimationSpeed, GameSpeed, CarScale, SBRechargeTime, SBRechargeSpeedLimit, SBMassMultiplier, HUDUpdateRate, RadarRange, SpeedingLimit, ExcessiveSpeedingLimit, RecklessDrivingLimit, DriftRaceCollisionThreshold, DebugCameraTurboSpeed, DebugCameraSuperTurboSpeed, IdleCameraTimeout, RacePositionX, RacePositionY, CarSelectTireSteerAngle;
 float FloatValue1pt00 = 1.0f, FloatValue10pt00 = 10.0f;
 HWND windowHandle;
 
@@ -293,6 +293,7 @@ void Init()
 	ShowLightStreaks = iniReader.ReadInteger("Menu", "ShowLightStreaks", 1) == 1;
 	PauseScreenBlur = iniReader.ReadInteger("Menu", "PauseScreenBlur", 1) == 1;
 	HUDShakeEffect = iniReader.ReadInteger("Menu", "HUDShakeEffect", 1) == 1;
+	CarSelectTireSteerAngle = iniReader.ReadFloat("Menu", "CarSelectTireSteerAngle", 20.6723f);
 	GarageZoom = iniReader.ReadInteger("Menu", "ShowcaseCamInfiniteZoom", 0) == 1;
 	GarageRotate = iniReader.ReadInteger("Menu", "ShowcaseCamInfiniteRotation", 0) == 1;
 	GarageShowcase = iniReader.ReadInteger("Menu", "ShowcaseCamAlwaysEnable", 0) == 1;
@@ -751,6 +752,9 @@ void Init()
 
 	// Fix Invisible Wheels
 	if (WheelFix) injector::WriteMemory<unsigned char>(0x7BDDBC, 0x01, true);
+
+	// Menu Front Tire Angle
+	injector::WriteMemory<float>(0xA7B668, CarSelectTireSteerAngle, true);
 
 	// Garage Hacks
 	if (GarageZoom)
