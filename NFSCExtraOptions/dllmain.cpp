@@ -21,7 +21,7 @@ HWND windowHandle;
 DWORD HeatLevelsCodeCaveExit = 0x449a82;
 DWORD StringReplacementCodeCaveExit = 0x57861F;
 
-char* StringBuffer1 = "© 2006 Electronic Arts Inc. All rights reserved.^NFSC Extra Options - © 2018 ExOpts Team. No rights reserved.";
+char* StringBuffer1 = "© 2006 Electronic Arts Inc. All rights reserved.^NFSC Extra Options - © 2022 ExOpts Team. No rights reserved.";
 DWORD _A7EBC389_New = (DWORD)StringBuffer1;
 
 DWORD CopsOptionCodeCaveExit = 0x84C1E1;
